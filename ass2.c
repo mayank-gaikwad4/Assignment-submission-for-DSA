@@ -3,8 +3,23 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 
 #define MAX_TERMS 101
+
+#define c_str_to_long strtol
+#define c_str_to_double strtod
+#define c_is_space isspace
+
+typedef int32_t i32;
+typedef double f64;
+
+i32 get_int(void);
+f64 get_double(void);
+char* get_string(void);
+i32 get_int_in_range(i32 min_val, i32 max_val);
 
 typedef struct {
 	int row;
@@ -25,79 +40,8 @@ typedef enum {
 	MENU_EXIT_PROGRAM
 } SparseMenuOption;
 
-bool is_valid_input(const char *str) {
-	for (int i = 0; str[i] != '\0'; i++) {
-		bool is_alpha = (str[i] >= 'a' && str[i] <= 'z') || (str[i] >= 'A' && str[i] <= 'Z');
-		bool is_sym = isdigit((unsigned char)str[i]) || str[i] == '-' || str[i] == '+' || isspace((unsigned char)str[i]);
-
-		if (is_alpha || !is_sym) {
-			return false;
-		}
-	}
-	return true;
-}
-
-bool is_in_range(int val, int min, int max) {
-	return val >= min && val <= max;
-}
-
 bool is_valid_coord(int r, int c, int max_r, int max_c) {
-	return is_in_range(r, 0, max_r - 1) && is_in_range(c, 0, max_c - 1);
-}
-
-bool read_line(char *buf, size_t size) {
-	if (fgets(buf, size, stdin) == NULL) {
-		clearerr(stdin);
-		return false;
-	}
-	return true;
-}
-
-bool parse_int(const char *buf, int *res) {
-	if (!is_valid_input(buf)) {
-		return false;
-	}
-	char trail;
-	return sscanf(buf, "%d %c", res, &trail) == 1;
-}
-
-bool parse_three_ints(const char *buf, int *v1, int *v2, int *v3) {
-	if (!is_valid_input(buf)) {
-		return false;
-	}
-	char trail;
-	return sscanf(buf, "%d %d %d %c", v1, v2, v3, &trail) == 3;
-}
-
-int get_int(void) {
-	char buf[256];
-	int val;
-	while (true) {
-		if (read_line(buf, sizeof(buf)) && parse_int(buf, &val)) {
-			return val;
-		}
-		printf("Invalid integer input.\nRetry: ");
-	}
-}
-
-int get_int_in_range(int min, int max) {
-	while (true) {
-		int val = get_int();
-		if (is_in_range(val, min, max)) {
-			return val;
-		}
-		printf("Value out of bounds.\nRetry: ");
-	}
-}
-
-void get_three_ints(int *v1, int *v2, int *v3) {
-	char buf[256];
-	while (true) {
-		if (read_line(buf, sizeof(buf)) && parse_three_ints(buf, v1, v2, v3)) {
-			return;
-		}
-		printf("Requires exactly three integers.\nRetry: ");
-	}
+	return (r >= 0 && r <= max_r - 1) && (c >= 0 && c <= max_c - 1);
 }
 
 void populate_sparse_matrix(SparseMatrix *mat) {
@@ -111,10 +55,11 @@ void populate_sparse_matrix(SparseMatrix *mat) {
 	mat->data[0].val = get_int_in_range(0, MAX_TERMS - 1);
 
 	for (int i = 1; i <= mat->data[0].val; i++) {
-		printf("Enter Row, Column, and Value for element %d: ", i);
+		printf("Enter Row, Column, and Value for element %d (one per line):\n", i);
 		while (true) {
-			int r, c, v;
-			get_three_ints(&r, &c, &v);
+			int r = get_int();
+			int c = get_int();
+			int v = get_int();
 
 			if (is_valid_coord(r, c, mat->data[0].row, mat->data[0].col)) {
 				mat->data[i].row = r;
@@ -122,7 +67,7 @@ void populate_sparse_matrix(SparseMatrix *mat) {
 				mat->data[i].val = v;
 				break;
 			}
-			printf("Coordinates out of matrix bounds.\nRetry Row, Column, and Value: ");
+			printf("Coordinates out of matrix bounds.\nRetry Row, Column, and Value (one per line):\n");
 		}
 	}
 }
@@ -226,4 +171,186 @@ int main(void) {
 		}
 	}
 	return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// INPUT SANITIZATION
+// IGNORE
+i32 get_int(void) {
+	i32 result = 0;
+	int valid = 0;
+	char buf[1024];
+
+	while (!valid) {
+		if (fgets(buf, sizeof(buf), stdin) == NULL) {
+			printf("\nError: No more input available (end of input reached). Exiting.\n");
+			exit(1);
+		}
+
+		size_t len = strlen(buf);
+		if (len > 0 && buf[len - 1] == '\n') {
+			buf[len - 1] = '\0';
+		}
+
+		if (buf[0] == '\0') {
+			printf("Error: Input is completely empty. Please enter a number.\nRetry: ");
+		} else {
+			char* endptr = NULL;
+			errno = 0;
+			long parsed = c_str_to_long(buf, &endptr, 10);
+
+			if (endptr == buf) {
+				const char* p = buf;
+				while (*p != '\0' && c_is_space((unsigned char)*p)) p++;
+
+				if (*p == '\0') {
+					printf("Error: Input contains only whitespace. Please enter a number.\nRetry: ");
+				} else {
+					printf("Error: Found invalid character '%c'. Expected a number.\nRetry: ", *p);
+				}
+			} else if (errno == ERANGE || parsed < INT32_MIN || parsed > INT32_MAX) {
+				printf("Error: Value is out of range for a 32-bit integer (Overflow/Underflow).\nRetry: ");
+			} else {
+				while (*endptr != '\0' && c_is_space((unsigned char)*endptr)) {
+					endptr++;
+				}
+
+				if (*endptr != '\0') {
+					printf("Error: Found invalid trailing character '%c'.\nRetry: ", *endptr);
+				} else {
+					result = (i32)parsed;
+					valid = 1;
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+f64 get_double(void) {
+	f64 result = 0.0;
+	int valid = 0;
+	char buf[1024];
+
+	while (!valid) {
+		if (fgets(buf, sizeof(buf), stdin) == NULL) {
+			printf("\nError: No more input available (end of input reached). Exiting.\n");
+			exit(1);
+		}
+
+		size_t len = strlen(buf);
+		if (len > 0 && buf[len - 1] == '\n') {
+			buf[len - 1] = '\0';
+		}
+
+		if (buf[0] == '\0') {
+			printf("Error: Input is completely empty. Please enter a number.\nRetry: ");
+		} else {
+			char* endptr = NULL;
+			errno = 0;
+			f64 parsed = c_str_to_double(buf, &endptr);
+
+			if (endptr == buf) {
+				const char* p = buf;
+				while (*p != '\0' && c_is_space((unsigned char)*p)) p++;
+
+				if (*p == '\0') {
+					printf("Error: Input contains only whitespace. Please enter a decimal.\nRetry: ");
+				} else {
+					printf("Error: Found invalid character '%c'. Expected a decimal.\nRetry: ", *p);
+				}
+			} else if (errno == ERANGE) {
+				printf("Error: Value is out of range for a 64-bit float (Overflow/Underflow).\nRetry: ");
+			} else {
+				while (*endptr != '\0' && c_is_space((unsigned char)*endptr)) {
+					endptr++;
+				}
+
+				if (*endptr != '\0') {
+					printf("Error: Found invalid trailing character '%c'.\nRetry: ", *endptr);
+				} else {
+					result = parsed;
+					valid = 1;
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+char* get_string(void) {
+	char* result = NULL;
+	int valid = 0;
+	char buf[1024];
+
+	while (!valid) {
+		if (fgets(buf, sizeof(buf), stdin) == NULL) {
+			printf("\nError: No more input available (end of input reached). Exiting.\n");
+			exit(1);
+		}
+
+		size_t len = strlen(buf);
+		if (len > 0 && buf[len - 1] == '\n') {
+			buf[len - 1] = '\0';
+		}
+
+		const char* p = buf;
+		while (*p != '\0' && c_is_space((unsigned char)*p)) p++;
+
+		if (*p == '\0') {
+			printf("Error: Input cannot be empty or consist only of whitespace.\nRetry: ");
+		} else {
+			result = strdup(buf);
+			valid = 1;
+		}
+	}
+
+	return result;
+}
+
+i32 get_int_in_range(i32 min_val, i32 max_val) {
+	i32 val = 0;
+	int valid = 0;
+
+	while (!valid) {
+		val = get_int();
+		if (val >= min_val && val <= max_val) {
+			valid = 1;
+		} else {
+			printf("Error: Value %d is out of bounds (%d to %d).\nRetry: ", val, min_val, max_val);
+		}
+	}
+
+	return val;
 }
