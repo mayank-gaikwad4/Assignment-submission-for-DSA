@@ -2,403 +2,307 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdbool.h>
 #include <errno.h>
-#include <limits.h>
 #include <stdint.h>
+#include <stdbool.h>
 
-#define MAX_ROWS 10
-#define MAX_COLS 10
-
-#define c_str_to_long strtol
-#define c_str_to_double strtod
-#define c_is_space isspace
+#define MAX_DIMENSION 10
 
 typedef int32_t i32;
+typedef int64_t i64;
+typedef uint32_t u32;
+typedef uint64_t u64;
+typedef uint8_t u8;
 typedef double f64;
-
-i32 get_int(void);
-f64 get_double(void);
-char* get_string(void);
-i32 get_int_in_range(i32 min_val, i32 max_val);
+typedef bool b32;
 
 typedef struct {
-	int rows;
-	int cols;
-	int data[MAX_ROWS][MAX_COLS];
-} DenseMatrix;
+    u32 row_count;
+    u32 col_count;
+    i32 elements[MAX_DIMENSION][MAX_DIMENSION];
+} Matrix;
 
-typedef enum {
-	MENU_INPUT_A = 1,
-	MENU_INPUT_B,
-	MENU_PRINT,
-	MENU_ADD,
-	MENU_SUBTRACT,
-	MENU_MULTIPLY,
-	MENU_TRANSPOSE_A,
-	MENU_TRANSPOSE_B,
-	MENU_EXIT
-} MenuOption;
+i32 GetInt(void);
+f64 GetDouble(void);
+char* GetString(void);
+i32 GetIntInRange(i32 min_value, i32 max_value);
 
-DenseMatrix populate_dense_matrix(const char *name) {
-	DenseMatrix mat = {0};
+Matrix PopulateMatrix(const char* name);
+void PrintMatrix(const Matrix* matrix, const char* name);
+b32 AddMatrices(const Matrix* a, const Matrix* b, Matrix* result);
+b32 SubtractMatrices(const Matrix* a, const Matrix* b, Matrix* result);
+b32 MultiplyMatrices(const Matrix* a, const Matrix* b, Matrix* result);
+Matrix TransposeMatrix(const Matrix* source);
 
-	printf("Matrix %s Total Rows: ", name);
-	mat.rows = get_int_in_range(1, MAX_ROWS);
-
-	printf("Matrix %s Total Columns: ", name);
-	mat.cols = get_int_in_range(1, MAX_COLS);
-
-	for (int r = 0; r < mat.rows; r++) {
-		for (int c = 0; c < mat.cols; c++) {
-			printf("Element [%d][%d]: ", r, c);
-			mat.data[r][c] = get_int();
-		}
-	}
-	return mat;
+Matrix PopulateMatrix(const char* name) {
+    Matrix result = {0};
+    printf("Matrix %s Total Rows: ", name);
+    result.row_count = (u32)GetIntInRange(1, MAX_DIMENSION);
+    printf("Matrix %s Total Columns: ", name);
+    result.col_count = (u32)GetIntInRange(1, MAX_DIMENSION);
+    for (u32 row = 0; row < result.row_count; row++) {
+        for (u32 col = 0; col < result.col_count; col++) {
+            printf("Element [%u][%u]: ", row, col);
+            result.elements[row][col] = GetInt();
+        }
+    }
+    return result;
 }
 
-void print_dense_matrix(const DenseMatrix *mat, const char *name) {
-	printf("\n%s (%dx%d):\n", name, mat->rows, mat->cols);
-	for (int r = 0; r < mat->rows; r++) {
-		printf("  | ");
-		for (int c = 0; c < mat->cols; c++) {
-			printf("%6d ", mat->data[r][c]);
-		}
-		printf("|\n");
-	}
+void PrintMatrix(const Matrix* matrix, const char* name) {
+    printf("\n%s (%ux%u):\n", name, matrix->row_count, matrix->col_count);
+    for (u32 row = 0; row < matrix->row_count; row++) {
+        printf(" | ");
+        for (u32 col = 0; col < matrix->col_count; col++) {
+            printf("%6d ", matrix->elements[row][col]);
+        }
+        printf("|\n");
+    }
 }
 
-bool add_dense_matrices(const DenseMatrix *a, const DenseMatrix *b, DenseMatrix *res) {
-	if (a->rows != b->rows || a->cols != b->cols) {
-		return false;
-	}
-
-	res->rows = a->rows;
-	res->cols = a->cols;
-
-	for (int r = 0; r < a->rows; r++) {
-		for (int c = 0; c < a->cols; c++) {
-			res->data[r][c] = a->data[r][c] + b->data[r][c];
-		}
-	}
-	return true;
+b32 AddMatrices(const Matrix* a, const Matrix* b, Matrix* result) {
+    if (a->row_count != b->row_count || a->col_count != b->col_count) {
+        return false;
+    }
+    result->row_count = a->row_count;
+    result->col_count = a->col_count;
+    for (u32 row = 0; row < a->row_count; row++) {
+        for (u32 col = 0; col < a->col_count; col++) {
+            result->elements[row][col] = a->elements[row][col] + b->elements[row][col];
+        }
+    }
+    return true;
 }
 
-bool subtract_dense_matrices(const DenseMatrix *a, const DenseMatrix *b, DenseMatrix *res) {
-	if (a->rows != b->rows || a->cols != b->cols) {
-		return false;
-	}
-
-	res->rows = a->rows;
-	res->cols = a->cols;
-
-	for (int r = 0; r < a->rows; r++) {
-		for (int c = 0; c < a->cols; c++) {
-			res->data[r][c] = a->data[r][c] - b->data[r][c];
-		}
-	}
-	return true;
+b32 SubtractMatrices(const Matrix* a, const Matrix* b, Matrix* result) {
+    if (a->row_count != b->row_count || a->col_count != b->col_count) {
+        return false;
+    }
+    result->row_count = a->row_count;
+    result->col_count = a->col_count;
+    for (u32 row = 0; row < a->row_count; row++) {
+        for (u32 col = 0; col < a->col_count; col++) {
+            result->elements[row][col] = a->elements[row][col] - b->elements[row][col];
+        }
+    }
+    return true;
 }
 
-bool multiply_dense_matrices(const DenseMatrix *a, const DenseMatrix *b, DenseMatrix *res) {
-	if (a->cols != b->rows) {
-		return false;
-	}
-
-	res->rows = a->rows;
-	res->cols = b->cols;
-
-	for (int r = 0; r < a->rows; r++) {
-		for (int c = 0; c < b->cols; c++) {
-			res->data[r][c] = 0;
-			for (int k = 0; k < a->cols; k++) {
-				res->data[r][c] += a->data[r][k] * b->data[k][c];
-			}
-		}
-	}
-	return true;
+b32 MultiplyMatrices(const Matrix* a, const Matrix* b, Matrix* result) {
+    if (a->col_count != b->row_count) {
+        return false;
+    }
+    result->row_count = a->row_count;
+    result->col_count = b->col_count;
+    for (u32 row = 0; row < a->row_count; row++) {
+        for (u32 col = 0; col < b->col_count; col++) {
+            result->elements[row][col] = 0;
+            for (u32 k = 0; k < a->col_count; k++) {
+                result->elements[row][col] += a->elements[row][k] * b->elements[k][col];
+            }
+        }
+    }
+    return true;
 }
 
-DenseMatrix transpose_dense_matrix(const DenseMatrix *src) {
-	DenseMatrix res = {0};
-	res.rows = src->cols;
-	res.cols = src->rows;
-
-	for (int r = 0; r < src->rows; r++) {
-		for (int c = 0; c < src->cols; c++) {
-			res.data[c][r] = src->data[r][c];
-		}
-	}
-	return res;
+Matrix TransposeMatrix(const Matrix* source) {
+    Matrix result = {0};
+    result.row_count = source->col_count;
+    result.col_count = source->row_count;
+    for (u32 row = 0; row < source->row_count; row++) {
+        for (u32 col = 0; col < source->col_count; col++) {
+            result.elements[col][row] = source->elements[row][col];
+        }
+    }
+    return result;
 }
 
-int main(void) {
-	DenseMatrix mat_a = {0};
-	DenseMatrix mat_b = {0};
-	DenseMatrix mat_res = {0};
-	bool a_loaded = false;
-	bool b_loaded = false;
-	bool running = true;
+i32 main(void) {
+    Matrix matrix_a = {0};
+    Matrix matrix_b = {0};
+    Matrix matrix_result = {0};
+    b32 is_a_loaded = false;
+    b32 is_b_loaded = false;
+    b32 is_running = true;
+    code Code
 
-	while (running) {
-		printf("\n1. Input A\n2. Input B\n3. Print Matrices\n4. Add\n5. Subtract\n6. Multiply\n7. Transpose A\n8. Transpose B\n9. Exit\nSelection: ");
-		MenuOption selection = (MenuOption)get_int_in_range(MENU_INPUT_A, MENU_EXIT);
+    while (is_running) {
+        printf("\n1. Input A\n2. Input B\n3. Print Matrices\n4. Add\n5. Subtract\n6. Multiply\n7. Transpose A\n8. Transpose B\n9. Exit\nSelection: ");
+        i32 selection = GetIntInRange(1, 9);
 
-		switch (selection) {
-			case MENU_INPUT_A:
-				mat_a = populate_dense_matrix("A");
-				a_loaded = true;
-				break;
+        switch (selection) {
+            case 1:
+                matrix_a = PopulateMatrix("A");
+                is_a_loaded = true;
+                break;
+            case 2:
+                matrix_b = PopulateMatrix("B");
+                is_b_loaded = true;
+                break;
+            case 3:
+                if (!is_a_loaded && !is_b_loaded) {
+                    printf("Matrices are empty.\n");
+                } else {
+                    if (is_a_loaded) PrintMatrix(&matrix_a, "Matrix A");
+                    if (is_b_loaded) PrintMatrix(&matrix_b, "Matrix B");
+                }
+                break;
+            case 4:
+                if (!is_a_loaded || !is_b_loaded) {
+                    printf("Missing one or both matrices.\n");
+                } else if (AddMatrices(&matrix_a, &matrix_b, &matrix_result)) {
+                    PrintMatrix(&matrix_result, "A + B");
+                } else {
+                    printf("Dimension mismatch for addition.\n");
+                }
+                break;
+            case 5:
+                if (!is_a_loaded || !is_b_loaded) {
+                    printf("Missing one or both matrices.\n");
+                } else if (SubtractMatrices(&matrix_a, &matrix_b, &matrix_result)) {
+                    PrintMatrix(&matrix_result, "A - B");
+                } else {
+                    printf("Dimension mismatch for subtraction.\n");
+                }
+                break;
+            case 6:
+                if (!is_a_loaded || !is_b_loaded) {
+                    printf("Missing one or both matrices.\n");
+                } else if (MultiplyMatrices(&matrix_a, &matrix_b, &matrix_result)) {
+                    PrintMatrix(&matrix_result, "A * B");
+                } else {
+                    printf("Dimension mismatch for multiplication.\n");
+                }
+                break;
+            case 7:
+                if (!is_a_loaded) {
+                    printf("Matrix A is empty.\n");
+                } else {
+                    matrix_result = TransposeMatrix(&matrix_a);
+                    PrintMatrix(&matrix_result, "Transpose of A");
+                }
+                break;
+            case 8:
+                if (!is_b_loaded) {
+                    printf("Matrix B is empty.\n");
+                } else {
+                    matrix_result = TransposeMatrix(&matrix_b);
+                    PrintMatrix(&matrix_result, "Transpose of B");
+                }
+                break;
+            case 9:
+                is_running = false;
+                break;
+        }
+    }
+    return 0;
 
-			case MENU_INPUT_B:
-				mat_b = populate_dense_matrix("B");
-				b_loaded = true;
-				break;
-
-			case MENU_PRINT:
-				if (!a_loaded && !b_loaded) {
-					printf("Matrices are empty.\n");
-				} else {
-					if (a_loaded) print_dense_matrix(&mat_a, "Matrix A");
-					if (b_loaded) print_dense_matrix(&mat_b, "Matrix B");
-				}
-				break;
-
-			case MENU_ADD:
-				if (!a_loaded || !b_loaded) {
-					printf("Missing one or both matrices.\n");
-				} else if (add_dense_matrices(&mat_a, &mat_b, &mat_res)) {
-					print_dense_matrix(&mat_res, "A + B");
-				} else {
-					printf("Dimension mismatch for addition.\n");
-				}
-				break;
-
-			case MENU_SUBTRACT:
-				if (!a_loaded || !b_loaded) {
-					printf("Missing one or both matrices.\n");
-				} else if (subtract_dense_matrices(&mat_a, &mat_b, &mat_res)) {
-					print_dense_matrix(&mat_res, "A - B");
-				} else {
-					printf("Dimension mismatch for subtraction.\n");
-				}
-				break;
-
-			case MENU_MULTIPLY:
-				if (!a_loaded || !b_loaded) {
-					printf("Missing one or both matrices.\n");
-				} else if (multiply_dense_matrices(&mat_a, &mat_b, &mat_res)) {
-					print_dense_matrix(&mat_res, "A * B");
-				} else {
-					printf("Dimension mismatch for multiplication.\n");
-				}
-				break;
-
-			case MENU_TRANSPOSE_A:
-				if (!a_loaded) {
-					printf("Matrix A is empty.\n");
-				} else {
-					mat_res = transpose_dense_matrix(&mat_a);
-					print_dense_matrix(&mat_res, "Transpose of A");
-				}
-				break;
-
-			case MENU_TRANSPOSE_B:
-				if (!b_loaded) {
-					printf("Matrix B is empty.\n");
-				} else {
-					mat_res = transpose_dense_matrix(&mat_b);
-					print_dense_matrix(&mat_res, "Transpose of B");
-				}
-				break;
-
-			case MENU_EXIT:
-				running = false;
-				break;
-		}
-	}
-	return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// INPUT SANITIZATION
-// IGNORE
-i32 get_int(void) {
-	i32 result = 0;
-	int valid = 0;
-	char buf[1024];
-
-	while (!valid) {
-		if (fgets(buf, sizeof(buf), stdin) == NULL) {
-			printf("\nError: No more input available (end of input reached). Exiting.\n");
-			exit(1);
-		}
-
-		size_t len = strlen(buf);
-		if (len > 0 && buf[len - 1] == '\n') {
-			buf[len - 1] = '\0';
-		}
-
-		if (buf[0] == '\0') {
-			printf("Error: Input is completely empty. Please enter a number.\nRetry: ");
-		} else {
-			char* endptr = NULL;
-			errno = 0;
-			long parsed = c_str_to_long(buf, &endptr, 10);
-
-			if (endptr == buf) {
-				const char* p = buf;
-				while (*p != '\0' && c_is_space((unsigned char)*p)) p++;
-
-				if (*p == '\0') {
-					printf("Error: Input contains only whitespace. Please enter a number.\nRetry: ");
-				} else {
-					printf("Error: Found invalid character '%c'. Expected a number.\nRetry: ", *p);
-				}
-			} else if (errno == ERANGE || parsed < INT32_MIN || parsed > INT32_MAX) {
-				printf("Error: Value is out of range for a 32-bit integer (Overflow/Underflow).\nRetry: ");
-			} else {
-				while (*endptr != '\0' && c_is_space((unsigned char)*endptr)) {
-					endptr++;
-				}
-
-				if (*endptr != '\0') {
-					printf("Error: Found invalid trailing character '%c'.\nRetry: ", *endptr);
-				} else {
-					result = (i32)parsed;
-					valid = 1;
-				}
-			}
-		}
-	}
-
-	return result;
+// ignore input sanitization
+i32 GetInt(void) {
+    char input_buffer[1024];
+    while (true) {
+        if (!fgets(input_buffer, sizeof(input_buffer), stdin)) {
+            printf("\nError: End of input.\n");
+            exit(1);
+        }
+        u64 length = strlen(input_buffer);
+        if (length > 0 && input_buffer[length - 1] == '\n') {
+            input_buffer[length - 1] = '\0';
+        }
+        if (input_buffer[0] == '\0') {
+            printf("Error: Empty input.\nRetry: ");
+            continue;
+        }
+        char* end_pointer = NULL;
+        errno = 0;
+        i64 parsed_value = strtol(input_buffer, &end_pointer, 10);
+        if (end_pointer == input_buffer) {
+            printf("Error: Invalid input.\nRetry: ");
+            continue;
+        }
+        if (errno == ERANGE || parsed_value < INT32_MIN || parsed_value > INT32_MAX) {
+            printf("Error: Out of range.\nRetry: ");
+            continue;
+        }
+        while (*end_pointer != '\0' && isspace((u8)*end_pointer)) {
+            end_pointer++;
+        }
+        if (*end_pointer != '\0') {
+            printf("Error: Trailing characters.\nRetry: ");
+            continue;
+        }
+        return (i32)parsed_value;
+    }
 }
 
-f64 get_double(void) {
-	f64 result = 0.0;
-	int valid = 0;
-	char buf[1024];
-
-	while (!valid) {
-		if (fgets(buf, sizeof(buf), stdin) == NULL) {
-			printf("\nError: No more input available (end of input reached). Exiting.\n");
-			exit(1);
-		}
-
-		size_t len = strlen(buf);
-		if (len > 0 && buf[len - 1] == '\n') {
-			buf[len - 1] = '\0';
-		}
-
-		if (buf[0] == '\0') {
-			printf("Error: Input is completely empty. Please enter a number.\nRetry: ");
-		} else {
-			char* endptr = NULL;
-			errno = 0;
-			f64 parsed = c_str_to_double(buf, &endptr);
-
-			if (endptr == buf) {
-				const char* p = buf;
-				while (*p != '\0' && c_is_space((unsigned char)*p)) p++;
-
-				if (*p == '\0') {
-					printf("Error: Input contains only whitespace. Please enter a decimal.\nRetry: ");
-				} else {
-					printf("Error: Found invalid character '%c'. Expected a decimal.\nRetry: ", *p);
-				}
-			} else if (errno == ERANGE) {
-				printf("Error: Value is out of range for a 64-bit float (Overflow/Underflow).\nRetry: ");
-			} else {
-				while (*endptr != '\0' && c_is_space((unsigned char)*endptr)) {
-					endptr++;
-				}
-
-				if (*endptr != '\0') {
-					printf("Error: Found invalid trailing character '%c'.\nRetry: ", *endptr);
-				} else {
-					result = parsed;
-					valid = 1;
-				}
-			}
-		}
-	}
-
-	return result;
+f64 GetDouble(void) {
+    char input_buffer[1024];
+    while (true) {
+        if (!fgets(input_buffer, sizeof(input_buffer), stdin)) {
+            printf("\nError: End of input.\n");
+            exit(1);
+        }
+        u64 length = strlen(input_buffer);
+        if (length > 0 && input_buffer[length - 1] == '\n') {
+            input_buffer[length - 1] = '\0';
+        }
+        if (input_buffer[0] == '\0') {
+            printf("Error: Empty input.\nRetry: ");
+            continue;
+        }
+        char* end_pointer = NULL;
+        errno = 0;
+        f64 parsed_value = strtod(input_buffer, &end_pointer);
+        if (end_pointer == input_buffer) {
+            printf("Error: Invalid input.\nRetry: ");
+            continue;
+        }
+        if (errno == ERANGE) {
+            printf("Error: Out of range.\nRetry: ");
+            continue;
+        }
+        while (*end_pointer != '\0' && isspace((u8)*end_pointer)) {
+            end_pointer++;
+        }
+        if (*end_pointer != '\0') {
+            printf("Error: Trailing characters.\nRetry: ");
+            continue;
+        }
+        return parsed_value;
+    }
 }
 
-char* get_string(void) {
-	char* result = NULL;
-	int valid = 0;
-	char buf[1024];
-
-	while (!valid) {
-		if (fgets(buf, sizeof(buf), stdin) == NULL) {
-			printf("\nError: No more input available (end of input reached). Exiting.\n");
-			exit(1);
-		}
-
-		size_t len = strlen(buf);
-		if (len > 0 && buf[len - 1] == '\n') {
-			buf[len - 1] = '\0';
-		}
-
-		const char* p = buf;
-		while (*p != '\0' && c_is_space((unsigned char)*p)) p++;
-
-		if (*p == '\0') {
-			printf("Error: Input cannot be empty or consist only of whitespace.\nRetry: ");
-		} else {
-			result = strdup(buf);
-			valid = 1;
-		}
-	}
-
-	return result;
+char* GetString(void) {
+    char input_buffer[1024];
+    while (true) {
+        if (!fgets(input_buffer, sizeof(input_buffer), stdin)) {
+            printf("\nError: End of input.\n");
+            exit(1);
+        }
+        u64 length = strlen(input_buffer);
+        if (length > 0 && input_buffer[length - 1] == '\n') {
+            input_buffer[length - 1] = '\0';
+        }
+        const char* checker = input_buffer;
+        while (*checker != '\0' && isspace((u8)*checker)) {
+            checker++;
+        }
+        if (*checker == '\0') {
+            printf("Error: Empty input.\nRetry: ");
+            continue;
+        }
+        return strdup(input_buffer);
+    }
 }
 
-i32 get_int_in_range(i32 min_val, i32 max_val) {
-	i32 val = 0;
-	int valid = 0;
-
-	while (!valid) {
-		val = get_int();
-		if (val >= min_val && val <= max_val) {
-			valid = 1;
-		} else {
-			printf("Error: Value %d is out of bounds (%d to %d).\nRetry: ", val, min_val, max_val);
-		}
-	}
-
-	return val;
+i32 GetIntInRange(i32 min_value, i32 max_value) {
+    while (true) {
+        i32 value = GetInt();
+        if (value >= min_value && value <= max_value) {
+            return value;
+        }
+        printf("Error: Out of bounds (%d to %d).\nRetry: ", min_value, max_value);
+    }
 }
